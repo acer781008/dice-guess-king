@@ -1,0 +1,17 @@
+{
+  "name": "dice-guess-king-online",
+  "version": "1.0.0",
+  "private": true,
+  "description": "骰子猜猜王正式多人連線版",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  }
+}
