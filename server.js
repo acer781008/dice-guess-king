@@ -10,6 +10,9 @@ const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '1234';
 
 app.use(express.static('public', { etag: false, maxAge: 0 }));
+app.get('/', (_req, res) => {
+  res.sendFile(__dirname + '/public/admin.html');
+});
 app.get('/health', (_req,res)=>res.json({ok:true,time:new Date().toISOString()}));
 
 const rooms = new Map();
