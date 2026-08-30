@@ -31,11 +31,44 @@ function defaults(id, adminToken){
   };
 }
 function publicState(r){
-  const players=[...r.players.values()].map(p=>({name:p.name,score:p.score,answered:p.answered,lastGain:p.lastGain,online:p.online}));
+  const players=[...r.players.values()].map(p=>({
+    name:p.name,
+    score:Number(p.score)||0,
+    answered:!!p.answered,
+    lastGain:Number(p.lastGain)||0,
+    online:!!p.online
+  }));
   return { room:r.id, settings:r.settings, status:r.status, phase:r.phase, round:r.round, remaining:r.remaining, paused:r.paused, dice:r.dice, result:r.result, players };
 }
-function adminState(r){ return publicState(r); }
-function emitRoom(r){ io.to(`room:${r.id}`).emit('room:state', publicState(r)); io.to(`admin:${r.id}`).emit('admin:state', adminState(r)); }
+function adminState(r){
+  const state=publicState(r);
+  state.players=[...r.players.values()].map(p=>({
+    name:p.name,
+    score:Number(p.score)||0,
+    answered:!!p.answered,
+    answer:p.answered ? p.answer : null,
+    lastGain:Number(p.lastGain)||0,
+    online:!!p.online
+  }));
+  return state;
+}
+function selfState(r,p){
+  return {
+    room:r.id,
+    round:r.round,
+    answered:!!p.answered,
+    answer:p.answer,
+    lastGain:Number(p.lastGain)||0,
+    score:Number(p.score)||0
+  };
+}
+function emitRoom(r){
+  io.to(`room:${r.id}`).emit('room:state', publicState(r));
+  io.to(`admin:${r.id}`).emit('admin:state', adminState(r));
+  for(const p of r.players.values()){
+    if(p.socketId) io.to(p.socketId).emit('player:self', selfState(r,p));
+  }
+}
 function getAdminRoom(socket, payload={}){
   const id=payload.room || socket.data.adminRoom;
   const r=rooms.get(String(id||''));
@@ -91,7 +124,7 @@ function scoreRound(r){
       const a=Array.isArray(p.answer)?p.answer.map(Number):[];
       for(let i=0;i<dice.length;i++) if(a[i]===dice[i]) gain+=r.settings.numberPoint;
     } else if(String(p.answer)===String(result)) gain=10;
-    p.lastGain=gain; p.score+=gain;
+    p.lastGain=gain; p.score=(Number(p.score)||0)+gain;
   }
   setPhase(r,'公布答案',3);
 }
@@ -146,13 +179,13 @@ io.on('connection', socket=>{
     if(playerToken){p=[...r.players.values()].find(x=>x.token===playerToken);}
     if(p){p.online=true;p.socketId=socket.id;name=p.name;}
     else {if([...r.players.values()].some(x=>x.name===name))return cb({ok:false,error:'此遊戲名已有人使用'});p={token:token(),name,score:0,answer:null,answered:false,lastGain:0,online:true,socketId:socket.id};r.players.set(p.token,p);}
-    socket.data.playerRoom=r.id;socket.data.playerToken=p.token;socket.join(`room:${r.id}`);cb({ok:true,playerToken:p.token,name:p.name,state:publicState(r)});emitRoom(r);
+    socket.data.playerRoom=r.id;socket.data.playerToken=p.token;socket.join(`room:${r.id}`);cb({ok:true,playerToken:p.token,name:p.name,state:publicState(r),self:selfState(r,p)});emitRoom(r);
   });
   socket.on('player:submit',({room,playerToken,answer}={},cb=()=>{})=>{
     const r=rooms.get(String(room||''));if(!r)return cb({ok:false,error:'找不到遊戲房間'});const p=r.players.get(playerToken);if(!p)return cb({ok:false,error:'玩家身分失效'});
     if(r.status!=='playing'||r.phase!=='玩家作答中')return cb({ok:false,error:'目前不是作答時間'});if(p.answered)return cb({ok:false,error:'本回合已提交答案'});
     if(r.settings.mode.startsWith('猜號碼')){if(!Array.isArray(answer)||answer.length!==r.settings.diceCount||answer.some(v=>Number(v)<1||Number(v)>6))return cb({ok:false,error:'答案格式錯誤'});p.answer=answer.map(Number);}else p.answer=String(answer);
-    p.answered=true;emitRoom(r);cb({ok:true});
+    p.answered=true;emitRoom(r);cb({ok:true,self:selfState(r,p)});
   });
   socket.on('disconnect',()=>{const r=rooms.get(String(socket.data.playerRoom||''));if(r&&socket.data.playerToken&&r.players.has(socket.data.playerToken)){r.players.get(socket.data.playerToken).online=false;emitRoom(r);}});
 });
