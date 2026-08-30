@@ -29,6 +29,12 @@ $('loginBtn').onclick=login;$('pw').addEventListener('keydown',e=>{if(e.key==='E
 $('newRoomBtn').onclick=()=>{if(!confirm('確定建立新房號？目前房間的玩家與進度不會帶過去。'))return;socket.emit('admin:new-room',{room:ROOM,adminToken:ADMIN_TOKEN},res=>{if(!res.ok)return alert(res.error);ROOM=res.room;ADMIN_TOKEN=res.adminToken;S=res.state;localStorage.setItem('DGK_ADMIN_ROOM',ROOM);localStorage.setItem('DGK_ADMIN_TOKEN',ADMIN_TOKEN);render()})};
 $('saveSettingsBtn').onclick=()=>socket.emit('admin:update-settings',{room:ROOM,adminToken:ADMIN_TOKEN,settings:formSettings()},res=>{$('settingsMsg').textContent=res.ok?'✅ 設定已儲存':res.error});
 $('startBtn').onclick=()=>socket.emit('admin:start',{room:ROOM,adminToken:ADMIN_TOKEN},res=>{if(!res.ok)alert(res.error)});$('pauseBtn').onclick=()=>socket.emit('admin:pause',{room:ROOM,adminToken:ADMIN_TOKEN},res=>{if(!res.ok)alert(res.error)});$('endBtn').onclick=()=>{if(confirm('確定結束本場遊戲？'))socket.emit('admin:end',{room:ROOM,adminToken:ADMIN_TOKEN},res=>{if(!res.ok)alert(res.error)})};
-async function copy(t,msg){try{await navigator.clipboard.writeText(t);alert(msg)}catch(e){prompt('請複製：',t)}}$('copyLinkBtn').onclick=()=>copy(playerUrl(),'玩家連結已複製！');$('copyShareBtn').onclick=()=>{const s=S.settings;copy(`🎲 骰子猜猜王\n🔗 挑戰連結：${playerUrl()}\n🔢 房間號：${ROOM}\n🎮 遊戲模式：${s.mode}\n📅 開賽時間：${s.startAt||'尚未設定'}\n🔄 遊戲回合：${s.totalRounds} 回\n⏱️ 每回合作答時間：${s.answerSeconds} 秒\n📝 備註：${s.note||'無'}`,'分享文字已複製！')};$('copyRankBtn').onclick=()=>copy(rankArray().map((p,i)=>`${i+1} > ${p.name} > ${p.score}分`).join('\n')||'尚無玩家','排行榜已複製！');
+async function copy(t,msg){try{await navigator.clipboard.writeText(t);alert(msg)}catch(e){prompt('請複製：',t)}}$('copyLinkBtn').onclick=()=>copy(playerUrl(),'玩家連結已複製！');$('copyShareBtn').onclick=()=>{const s=S.settings;copy(`🎲 骰子猜猜王\n🔗 挑戰連結：${playerUrl()}\n🔢 房間號：${ROOM}\n🎮 遊戲模式：${s.mode}\n📅 開賽時間：${s.startAt||'尚未設定'}\n🔄 遊戲回合：${s.totalRounds} 回\n⏱️ 每回合作答時間：${s.answerSeconds} 秒\n📝 備註：${s.note||'無'}`,'分享文字已複製！')};$('copyRankBtn').onclick=()=>{
+  const r=rankArray();
+  const text=r.length
+    ? `🏆 即時排行榜\n\n排名｜玩家｜分數\n${r.map((p,i)=>`${i+1} > ${p.name} > ${p.score}分`).join('\n')}`
+    : '尚無玩家';
+  copy(text,'排行榜已複製！');
+};
 socket.on('room:state',st=>{if(st.room===ROOM){S=st;render()}});socket.on('admin:state',st=>{if(st.room===ROOM){S=st;render()}});
 </script></body></html>

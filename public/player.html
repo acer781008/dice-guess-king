@@ -1,5 +1,24 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>骰子猜猜王｜玩家</title><style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,"Microsoft JhengHei",sans-serif;color:#333;background:linear-gradient(135deg,#2a2088,#5d3bbd 43%,#ff79b0);min-height:100vh}.wrap{position:relative;z-index:1;max-width:760px;margin:auto;padding:16px}.card{background:rgba(255,255,255,.96);border-radius:22px;padding:20px;box-shadow:0 8px 26px rgba(0,0,0,.18);margin:14px 0}.hidden{display:none!important}h1{text-align:center;color:#fff;text-shadow:0 3px 8px rgba(30,20,100,.65);font-size:34px}.pill{display:inline-block;background:#fff0dc;padding:8px 12px;border-radius:999px;font-weight:700;margin:3px}.row{display:flex;gap:10px;flex-wrap:wrap}.info{display:flex;gap:8px;flex-wrap:wrap}input{width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;font-size:16px}button{border:0;border-radius:14px;padding:11px 14px;font-weight:700;cursor:pointer}.primary{background:#ff8b4d;color:#fff}.choice{background:#fff1e6;border:2px solid transparent}.choice.sel{border-color:#ff8b4d;background:#ffe2c9}.small{font-size:13px;color:#777}.timer{font-size:38px;font-weight:900;text-align:center}.phase{text-align:center;font-size:22px;font-weight:800}.dice{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:15px 0}.die{width:64px;height:64px;border-radius:14px;background:#fff;border:2px solid #222;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;box-shadow:0 5px 12px rgba(0,0,0,.12)}.result{text-align:center;font-size:26px;font-weight:900}.picked{margin:12px 0;padding:12px 14px;border-radius:14px;background:#fff4d8;border:1px solid #ffd68a;text-align:center;font-weight:800}.gain{margin-top:8px;color:#7a3cff;font-size:18px;font-weight:900;text-align:center}.ranking .item{display:flex;justify-content:space-between;padding:10px 4px;border-bottom:1px solid #eee}.you{background:#fff5cf;border-radius:10px;padding:4px}.err{color:#d33;font-weight:700;margin-top:8px}@media(max-width:520px){.wrap{padding:10px}.die{width:54px;height:54px}.timer{font-size:32px}}
+
+/* V2.1：所有遊戲模式作答按鈕統一放大 */
+#answers .choice{
+  min-width:88px;
+  min-height:64px;
+  padding:14px 18px;
+  font-size:28px;
+  font-weight:900;
+  border-radius:16px;
+}
+#answers{gap:12px}
+@media(max-width:520px){
+  #answers .choice{
+    min-width:72px;
+    min-height:58px;
+    padding:12px 14px;
+    font-size:24px;
+  }
+}
 </style></head><body><div class="wrap"><h1>🎲 骰子猜猜王</h1><div id="login" class="card"><h2>加入遊戲</h2><div class="info"><span class="pill">🔢 房間：<b id="roomNo">------</b></span><span class="pill">🎮 <b id="loginMode">—</b></span><span class="pill">🔄 <b id="loginRounds">—</b></span></div><p>📅 開賽時間：<span id="loginStart">—</span></p><p>📝 備註：<span id="loginNote">無</span></p><label>遊戲名稱</label><input id="name" maxlength="16" placeholder="輸入你的遊戲名稱"><button id="joinBtn" class="primary" style="width:100%;margin-top:12px">加入遊戲</button><div id="joinMsg" class="err"></div></div>
 <div id="game" class="hidden"><div class="card"><div class="info"><span class="pill">🎮 模式：<b id="mode">—</b></span><span class="pill">🔄 回合：<b id="round">—</b></span><span class="pill">📝 備註：<b id="note">無</b></span><span class="pill">🏆 排名：<b id="rank">—</b></span><span class="pill">⭐ 得分：<b id="score">0</b></span></div><div style="text-align:center;margin:8px 0">✨ ⭐ ✨</div><div class="phase" id="phase">等待開始</div><div class="timer" id="timer">—</div><div class="dice" id="dice"></div><div class="result" id="result"></div><div class="picked" id="picked">🎯 本回合已選：尚未提交</div><div class="gain" id="gain"></div><div id="answers" class="row" style="justify-content:center"></div><button id="submitBtn" class="primary" style="width:100%;margin-top:14px">✅ 確認答案</button><div id="feedback" style="text-align:center;font-weight:700;margin-top:10px"></div></div><div class="card"><h3 id="rankTitle">🏆 即時排行榜</h3><div class="ranking" id="ranking"></div></div></div></div>
 <script src="/socket.io/socket.io.js"></script><script>
@@ -40,7 +59,7 @@ function render(full=true){
     $('feedback').textContent='';
   }else if(SELF?.round===S.round && SELF.answered){
     $('gain').textContent='';
-    $('feedback').textContent=`✅ 已提交：${fmtAnswer(SELF.answer)}`;
+    $('feedback').textContent='';
   }else{
     $('gain').textContent='';
     $('feedback').textContent='';
