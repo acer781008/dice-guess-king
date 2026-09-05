@@ -1,0 +1,115 @@
+*{box-sizing:border-box}
+:root{--purple:#6d55d7;--purple2:#8b6ff1;--blue:#4b87e9;--mint:#2fa28f;--pink:#df5a83;--ink:#3e3568;--line:#dfd9fa}
+html,body{min-height:100%}
+body{margin:0;font-family:system-ui,"Microsoft JhengHei",sans-serif;color:var(--ink);min-height:100vh;background:#dfeaff url("assets/dream-card-world-final.webp") center top/cover fixed no-repeat}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,243,252,.08));z-index:-1}
+.wrap{max-width:1180px;margin:auto;padding:14px 18px 28px}
+.hero{text-align:center;padding:6px 0 8px}
+.hero h1{margin:0;font-size:clamp(32px,5.2vw,58px);font-weight:1000;letter-spacing:1px;background:linear-gradient(180deg,#4d8af0 4%,#7452ce 45%,#ff9b38 78%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1px rgba(65,53,126,.35);filter:drop-shadow(0 3px 0 #fff) drop-shadow(0 5px 2px rgba(62,46,130,.18))}
+.hero p{margin:6px 0 0;font-weight:900;color:#51458c;text-shadow:0 2px 0 #fff;font-size:clamp(14px,2vw,18px)}
+.game-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 13px;border-radius:999px;background:rgba(255,255,255,.86);box-shadow:0 5px 18px rgba(88,67,155,.16);font-weight:900;color:#6953c5;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:1.04fr .96fr;gap:16px;align-items:stretch}
+.panel{background:rgba(255,255,255,.88);border:2px solid rgba(255,255,255,.95);border-radius:26px;box-shadow:0 14px 35px rgba(85,65,150,.20),inset 0 1px 0 rgba(255,255,255,.85);padding:20px;margin:12px 0;backdrop-filter:blur(6px)}
+.panel h2{margin:0 0 15px;font-size:24px;color:#3d3568}.panel h3{margin:16px 0 12px}
+.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+label{display:block;font-weight:900;font-size:14px;color:#49406f}
+input,select,textarea,button{width:100%;padding:12px 13px;border-radius:13px;border:1.5px solid var(--line);font:inherit}
+input,select,textarea{background:rgba(255,255,255,.94);color:#40376a;outline:none;transition:.15s}
+input:focus,select:focus,textarea:focus{border-color:#8e79ea;box-shadow:0 0 0 3px rgba(126,102,225,.12)}
+textarea{resize:vertical;min-height:78px}
+button{border:0;background:linear-gradient(180deg,#8067e7,#6449cb);color:#fff;font-weight:1000;cursor:pointer;box-shadow:0 6px 14px rgba(93,69,191,.25);transition:transform .1s,filter .1s}
+button:hover{filter:brightness(1.04)}button:active{transform:translateY(1px)}
+#start{background:linear-gradient(180deg,#39ae6c,#249655)}
+.danger{background:linear-gradient(180deg,#e6698b,#d94f76)}
+.secondary{background:linear-gradient(180deg,#2ea994,#238f80)}
+.status{font-weight:1000;text-align:center}.copymsg{min-height:22px;margin:8px 0 0;text-align:center;font-weight:1000;color:#21836f}
+.statuspanel{display:flex;flex-direction:column}.statuspanel .statusbox{padding:18px;border-radius:20px;background:linear-gradient(180deg,#f6f2ff,#eef2ff);border:2px solid #e2dafc;text-align:center;box-shadow:inset 0 1px 0 #fff}
+.statusbox span,.statusgrid span{display:block;font-size:13px;font-weight:900;opacity:.78}.statusbox b{display:block;font-size:27px;margin-top:5px;color:#604bb5}
+.statusgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:10px}.statusgrid>div{background:rgba(255,255,255,.93);border:1.5px solid #e7e0fa;border-radius:17px;padding:13px 6px;text-align:center}.statusgrid b{display:block;margin-top:4px;font-size:21px;color:#514393}
+.small{font-size:13px;opacity:.78;line-height:1.6}
+.rankhead{display:flex;justify-content:space-between;align-items:center;gap:10px}.compact{width:auto;padding-inline:18px}.ranking{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:15px;border:1.5px solid #e5def8;background:rgba(255,255,255,.75)}.ranking th,.ranking td{padding:11px 9px;border-bottom:1px solid #e9e4fa;text-align:center}.ranking th{background:#f3efff;color:#534597;font-weight:1000}.ranking tbody tr:last-child td{border-bottom:0}
+input[readonly]{background:#f2f0f8;color:#68617f;font-weight:1000;cursor:not-allowed}
+.login{max-width:540px;margin:7vh auto 0}.login.panel,.login .panel{background:rgba(255,255,255,.90)}.login label{margin-top:11px}.login input{margin-top:5px}.login button{margin-top:13px;padding:13px}
+.topbar{position:sticky;top:0;z-index:5;margin:0 auto;background:rgba(255,255,255,.93);border-bottom:2px solid rgba(255,255,255,.95);padding:9px 14px;display:flex;justify-content:space-between;gap:8px;font-weight:1000;box-shadow:0 5px 18px rgba(70,55,130,.12);color:#51428d}
+.board{display:grid;gap:clamp(4px,.8vw,8px);padding:12px;border:3px solid #fff;background:rgba(255,255,255,.70);border-radius:24px;box-shadow:0 14px 30px rgba(73,54,141,.20);backdrop-filter:blur(4px)}
+.card{aspect-ratio:1/1.08;min-width:0;border:2px solid #c7b8fa;border-radius:13px;background:linear-gradient(145deg,#7b62dd,#a78bed);box-shadow:0 5px 10px rgba(58,43,124,.28),inset 0 1px 0 rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;font-weight:1000;overflow:hidden;user-select:none;transition:transform .12s,box-shadow .12s}
+.card:not(.open):not(.matched):after{content:"★";color:#ffd77a;font-size:clamp(18px,4vw,34px);text-shadow:0 2px 0 #6d57c0}
+.card.open,.card.matched{background:#fff;color:#3f3664}.card.matched{outline:3px solid #76d7a3}.card img{width:92%;height:92%;object-fit:contain}.card .txt{font-size:clamp(10px,2.6vw,20px);line-height:1.18}
+.overlay{position:fixed;inset:0;background:rgba(66,49,121,.73);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-size:clamp(64px,20vw,150px);font-weight:1000;text-shadow:0 5px 20px rgba(0,0,0,.2)}
+.hidden{display:none!important}.result{text-align:center;font-size:20px}
+@media(max-width:760px){body{background-attachment:scroll;background-position:center top}.wrap{padding:8px 9px 20px}.grid2{grid-template-columns:1fr}.panel{padding:14px;border-radius:21px;margin:9px 0}.controls{grid-template-columns:1fr 1fr}.hero h1{font-size:clamp(30px,10vw,46px)}.ranking{font-size:13px}.card{border-radius:8px}.login{margin-top:3vh}.statusgrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.statusgrid{grid-template-columns:1fr 1fr}.statusgrid>div:last-child{grid-column:1/-1}.controls{gap:7px}input,select,textarea,button{padding:10px}.rankhead{align-items:flex-start}.compact{padding:9px 10px;font-size:13px}}
+/* V1.1.3 full visual layout */
+body{background-color:#cfe1ff;background-image:url("assets/dream-card-world-final.webp");background-position:center center;background-size:cover;background-attachment:fixed}
+.wrap{max-width:1120px;padding-top:8px}.hero{padding:2px 0 10px}.game-badge{display:none}.hero h1{font-size:clamp(36px,5vw,62px);line-height:1.05}.hero p{margin-top:8px}
+.login{max-width:760px;margin:2.5vh auto 0}.login .hero{margin-bottom:4px}.login.panel{max-width:540px}.login>section.panel{max-width:520px;margin:8px auto;padding:26px 28px;border-radius:24px}.login>section.panel h2{text-align:center;font-size:27px}
+.panel{background:rgba(255,255,255,.91);border:2px solid rgba(255,255,255,.95);box-shadow:0 12px 28px rgba(70,55,145,.18)}
+.grid2{grid-template-columns:1fr 1fr;gap:12px}.grid2>.panel{margin-top:0}.statuspanel{min-height:100%}
+#newRoom,#start{font-size:16px}.rankhead h2{margin-bottom:0}
+/* player join: compact centered card like approved mockup */
+#join.login{max-width:760px;margin:2.5vh auto 0}#join.login .hero{margin:-4px 0 6px}#join.login label,#join.login button,#join.login #msg{max-width:480px;margin-left:auto;margin-right:auto}#join.login label{margin-top:10px}#join.login button{display:block;margin-top:14px}
+/* game screen */
+#game{max-width:920px;margin:8px auto}.topbar{max-width:100%;justify-content:center;gap:32px;border-radius:0 0 18px 18px;font-size:18px}.board{max-width:860px;margin:auto;background:rgba(245,242,255,.90);border:3px solid rgba(255,255,255,.98);padding:16px;box-shadow:0 12px 28px rgba(74,58,150,.24)}
+.card{background:linear-gradient(145deg,#806ae8,#6b58d7);border:3px solid #a995ff;box-shadow:0 4px 8px rgba(52,42,116,.25),inset 0 0 0 2px rgba(255,255,255,.18)}.card:not(.open):not(.matched):after{content:"★";font-size:clamp(20px,4vw,38px);color:#ffd89a;text-shadow:0 2px 0 #5d4cb3}
+@media(max-width:760px){body{background-position:center center}.wrap{padding:6px 8px 18px}.hero h1{font-size:clamp(34px,10vw,48px)}.login{margin-top:1.5vh}.login>section.panel{padding:20px 18px}.grid2{grid-template-columns:1fr}.topbar{gap:10px;font-size:14px;justify-content:space-between}.board{padding:8px}.card{border-width:2px}}
+
+/* V1.1.4 VISUAL ONLY — approved dreamy card-world look; no game logic changes */
+html{background:#d9e9ff}
+body{
+  background-color:#d9e9ff;
+  background-image:url("assets/dream-card-world-final.webp");
+  background-repeat:no-repeat;
+  background-position:center top;
+  background-size:100% 100%;
+  background-attachment:fixed;
+  min-height:100vh;
+}
+body:before{display:none!important}
+.wrap{max-width:1160px;padding:10px 16px 34px}
+.hero{padding:8px 0 14px}
+.hero h1{
+  display:inline-block;margin:0;padding:0 10px;
+  font-size:clamp(38px,5.4vw,64px);line-height:1.04;font-weight:1000;
+  background:linear-gradient(180deg,#2d77ef 0%,#5260d8 42%,#ff9d36 72%,#ffb840 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-stroke:2px #fff;
+  filter:drop-shadow(0 3px 0 #43378d) drop-shadow(0 6px 3px rgba(66,48,135,.18));
+}
+.hero p{font-size:17px;color:#27347c;text-shadow:0 2px 0 #fff;margin-top:9px}
+.panel{
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(250,247,255,.93));
+  border:2px solid rgba(255,255,255,.98);border-radius:24px;
+  box-shadow:0 12px 30px rgba(75,55,151,.20),inset 0 0 0 1px rgba(126,105,214,.08);
+  backdrop-filter:blur(4px);
+}
+.grid2{gap:14px}.grid2>.panel{min-height:440px}
+.panel h2{color:#1e2b72;font-size:23px}.panel h3{color:#302b67}
+button{border-radius:11px;background:linear-gradient(180deg,#8068f0,#6048dc);box-shadow:0 5px 12px rgba(83,61,191,.22)}
+.secondary{background:linear-gradient(180deg,#159c93,#087d7d)}
+#start{background:linear-gradient(180deg,#35b45f,#20994a)}
+.danger{background:linear-gradient(180deg,#ee6685,#d93667)}
+input,select,textarea{border-color:#cfd4ef;background:#fff;border-radius:10px}
+.statusbox{background:linear-gradient(180deg,#f3f6ff,#edf0ff)!important;border-color:#d8ddf7!important}
+.statusbox b{color:#443ab2}.statusgrid>div{border-color:#d9def5;background:#fff}
+.ranking th{background:#eeeaff;color:#2d347e}.ranking{background:#fff}
+/* login/join cards should sit in the clean middle while scenery remains visible */
+.login{max-width:760px;margin:1.5vh auto 0}.login>section.panel,.login.panel{max-width:520px;margin:10px auto;padding:25px 28px}
+.login>section.panel h2,.login.panel h2{text-align:center;color:#17266f;font-size:27px}
+/* game HUD and board */
+.topbar{max-width:980px;margin:8px auto 0;border:2px solid rgba(255,255,255,.95);border-radius:18px;background:rgba(255,255,255,.94);color:#253179;box-shadow:0 7px 18px rgba(66,52,142,.18)}
+#game{max-width:940px}.board{background:rgba(242,240,255,.94);border:3px solid #fff;border-radius:22px;box-shadow:0 12px 28px rgba(69,51,145,.24);padding:14px}
+.card{border:3px solid #aa9cff;border-radius:12px;background:linear-gradient(145deg,#7665e6,#6252d4);box-shadow:0 4px 9px rgba(55,42,123,.27),inset 0 0 0 2px rgba(255,255,255,.18)}
+.card:not(.open):not(.matched):after{content:"★";color:#ffd794;text-shadow:0 2px 0 #5c4db2}
+@media(max-width:760px){
+  body{background-attachment:scroll;background-size:auto 100%;background-position:center top}
+  .wrap{padding:6px 8px 20px}.hero{padding-top:8px}.hero h1{font-size:clamp(34px,10vw,48px);-webkit-text-stroke:1.5px #fff}.hero p{font-size:14px}
+  .panel{border-radius:20px}.grid2>.panel{min-height:0}.login>section.panel,.login.panel{padding:20px 17px}
+  .topbar{margin:5px 6px 0;border-radius:14px}.board{padding:8px;border-radius:18px}.card{border-width:2px}
+}
+/* V1.1.6 gameplay fixes */
+.schedulebox{margin-top:12px;padding:12px;border:1.5px solid #ddd8f6;border-radius:14px;background:rgba(248,246,255,.86)}
+.checkline{display:flex;align-items:center;gap:9px;font-weight:1000;margin-bottom:9px}.checkline input{width:auto;transform:scale(1.15)}
+#scheduledAt:disabled{opacity:.55;cursor:not-allowed}
+.myresult{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:14px 0}.myresult>*{padding:10px 14px;border-radius:999px;background:#f0ecff;border:1.5px solid #ddd4ff;font-weight:1000;color:#493aa2}.myresult b{font-size:22px;background:linear-gradient(180deg,#fff5d9,#ffe6a2);color:#8a5b00;border-color:#ffd77f}
+#late{text-align:center;max-width:520px;margin:12vh auto 0}#late h2{font-size:34px;color:#d24e70}
+@media(max-width:760px){.board{width:100%;overflow:visible}.card{aspect-ratio:1/1.08}.myresult{gap:6px}.myresult>*{padding:8px 10px;font-size:14px}}
