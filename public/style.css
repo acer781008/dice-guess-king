@@ -113,3 +113,7 @@ input,select,textarea{border-color:#cfd4ef;background:#fff;border-radius:10px}
 .myresult{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:14px 0}.myresult>*{padding:10px 14px;border-radius:999px;background:#f0ecff;border:1.5px solid #ddd4ff;font-weight:1000;color:#493aa2}.myresult b{font-size:22px;background:linear-gradient(180deg,#fff5d9,#ffe6a2);color:#8a5b00;border-color:#ffd77f}
 #late{text-align:center;max-width:520px;margin:12vh auto 0}#late h2{font-size:34px;color:#d24e70}
 @media(max-width:760px){.board{width:100%;overflow:visible}.card{aspect-ratio:1/1.08}.myresult{gap:6px}.myresult>*{padding:8px 10px;font-size:14px}}
+
+/* V1.1.8 scheduled start player display */
+.scheduled-countdown{margin:10px auto 4px;padding:12px 16px;max-width:460px;border-radius:14px;background:#f0ecff;border:1.5px solid #d8d0ff;color:#493aa2;font-weight:1000;text-align:center;font-size:18px}
+#waitStatus{font-size:22px;font-weight:1000;color:#d24e70}

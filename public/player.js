@@ -2,7 +2,7 @@ const s=io(),$=id=>document.getElementById(id);
 let code='',me='',cfg=null,startAt=0,score=0,lock=false,first=null,cards=[],ticker=null,currentGameId=null,currentGameSeed=1,completed=false,latestRanking=[],joinedOnce=false;
 const idioms=['守株|待兔','畫蛇|添足','一心|一意','自相|矛盾','亡羊|補牢','井底|之蛙','掩耳|盜鈴','刻舟|求劍','狐假|虎威','胸有|成竹','雪中|送炭','錦上|添花','半途|而廢','水落|石出','大驚|小怪','東張|西望','七上|八下','三心|二意','九牛|一毛','四面|八方','異口|同聲','手忙|腳亂','天長|地久','風平|浪靜','千言|萬語','百發|百中','五花|八門','一舉|兩得','名列|前茅','聚精|會神','全神|貫注','迫不|及待'];
 const poems=['床前明月光|疑是地上霜','舉頭望明月|低頭思故鄉','白日依山盡|黃河入海流','欲窮千里目|更上一層樓','春眠不覺曉|處處聞啼鳥','夜來風雨聲|花落知多少','兩個黃鸝鳴翠柳|一行白鷺上青天','窗含西嶺千秋雪|門泊東吳萬里船','松下問童子|言師採藥去','只在此山中|雲深不知處','慈母手中線|遊子身上衣','誰言寸草心|報得三春暉','離離原上草|一歲一枯榮','野火燒不盡|春風吹又生','空山不見人|但聞人語響','返景入深林|復照青苔上','月落烏啼霜滿天|江楓漁火對愁眠','姑蘇城外寒山寺|夜半鐘聲到客船','朝辭白帝彩雲間|千里江陵一日還','兩岸猿聲啼不住|輕舟已過萬重山','千山鳥飛絕|萬徑人蹤滅','孤舟蓑笠翁|獨釣寒江雪','危樓高百尺|手可摘星辰','不敢高聲語|恐驚天上人','小時不識月|呼作白玉盤','又疑瑤台鏡|飛在青雲端','獨在異鄉為異客|每逢佳節倍思親','遙知兄弟登高處|遍插茱萸少一人','故人西辭黃鶴樓|煙花三月下揚州','孤帆遠影碧空盡|唯見長江天際流','葡萄美酒夜光杯|欲飲琵琶馬上催','醉臥沙場君莫笑|古來征戰幾人回'];
-const roomInput=$('room'),nameInput=$('name'),joinPanel=$('join'),waitPanel=$('wait'),gamePanel=$('game'),topBar=$('top'),overlayEl=$('overlay'),msgEl=$('msg'),roomShowEl=$('roomShow'),rulesEl=$('rules'),timerEl=$('timer'),boardEl=$('board'),resultEl=$('result'),latePanel=$('late');
+const roomInput=$('room'),nameInput=$('name'),joinPanel=$('join'),waitPanel=$('wait'),gamePanel=$('game'),topBar=$('top'),overlayEl=$('overlay'),msgEl=$('msg'),roomShowEl=$('roomShow'),rulesEl=$('rules'),timerEl=$('timer'),boardEl=$('board'),resultEl=$('result'),latePanel=$('late'),waitStatusEl=$('waitStatus'),scheduledCountdownEl=$('scheduledCountdown');
 roomInput.value=new URLSearchParams(location.search).get('room')||'';
 const savedName=roomInput.value?localStorage.getItem('mk:'+roomInput.value+':name'):'';if(savedName)nameInput.value=savedName;
 if(roomInput.value){s.emit('peekRoom',{code:roomInput.value},r=>{if(!r?.ok)return;if(r.state!=='waiting'&&!savedName){joinPanel.classList.add('hidden');latePanel.classList.remove('hidden');$('lateMsg').textContent=r.state==='finished'?'本局已結束':'比賽已開始';}})}
@@ -15,9 +15,25 @@ $('joinBtn').onclick=()=>{
     cfg=r.room.settings;joinedOnce=true;localStorage.setItem('mk:'+code+':name',me);joinPanel.classList.add('hidden');roomShowEl.textContent=code;rulesEl.textContent=ruleText(cfg);
     if(r.room.state==='playing'&&r.resume){startGame(r.resume.gameSeed,r.resume.gameId,r.resume.started,r.resume.gameEnds,true);return}
     waitPanel.classList.remove('hidden');
+    showWaitingState(r.room);
     if(r.room.state==='countdown'&&r.room.countdownEnds)runLocalCountdown(r.room.countdownEnds);
   })
 };
+
+let scheduledTicker=null;
+function showWaitingState(room){
+  clearInterval(scheduledTicker);scheduledTicker=null;
+  const c=room?.settings||cfg||{};const at=Number(c.scheduledAt)||0;
+  if(room?.state==='waiting'&&c.useScheduledStart&&at>Date.now()){
+    waitStatusEl.textContent='尚未開放';scheduledCountdownEl.classList.remove('hidden');
+    const tick=()=>{const left=Math.max(0,at-Date.now());scheduledCountdownEl.textContent=`距離開賽時間：${fmtLong(left)}`;if(left<=0){clearInterval(scheduledTicker);scheduledTicker=null;waitStatusEl.textContent='準備開賽…';scheduledCountdownEl.textContent='即將進入開賽倒數';}};
+    tick();scheduledTicker=setInterval(tick,250);
+  }else{
+    waitStatusEl.textContent=room?.state==='countdown'?'準備開賽…':'等待主控開始遊戲…';scheduledCountdownEl.classList.add('hidden');scheduledCountdownEl.textContent='';
+  }
+}
+function fmtLong(ms){let x=Math.max(0,Math.ceil(ms/1000)),d=Math.floor(x/86400);x%=86400;let h=Math.floor(x/3600);x%=3600;let m=Math.floor(x/60),sec=x%60;return `${d?d+'天 ':''}${String(h).padStart(2,'0')}時 ${String(m).padStart(2,'0')}分 ${String(sec).padStart(2,'0')}秒`}
+
 function runLocalCountdown(ends){clearInterval(window._joinCountdown);const tick=()=>{const n=Math.max(0,Math.ceil((ends-Date.now())/1000));overlayEl.classList.remove('hidden');overlayEl.textContent=n>0?n:'開始！';if(n<=0){clearInterval(window._joinCountdown);setTimeout(()=>overlayEl.classList.add('hidden'),500)}};tick();window._joinCountdown=setInterval(tick,250)}
 
 s.on('connect',()=>{
@@ -26,10 +42,11 @@ s.on('connect',()=>{
     if(!r?.ok)return;
     cfg=r.room.settings;
     if(r.room.state==='playing'&&r.resume){waitPanel.classList.add('hidden');startGame(r.resume.gameSeed,r.resume.gameId,r.resume.started,r.resume.gameEnds,true)}
-    else if(r.room.state==='countdown'&&r.room.countdownEnds){waitPanel.classList.remove('hidden');runLocalCountdown(r.room.countdownEnds)}
+    else if(r.room.state==='countdown'&&r.room.countdownEnds){waitPanel.classList.remove('hidden');showWaitingState(r.room);runLocalCountdown(r.room.countdownEnds)}
+    else if(r.room.state==='waiting'){waitPanel.classList.remove('hidden');showWaitingState(r.room)}
   });
 });
-s.on('countdownTick',n=>{overlayEl.classList.remove('hidden');overlayEl.textContent=n>0?n:'開始！';if(n<=0)setTimeout(()=>overlayEl.classList.add('hidden'),500)});
+s.on('countdownTick',n=>{clearInterval(scheduledTicker);scheduledTicker=null;waitStatusEl.textContent='準備開賽…';scheduledCountdownEl.classList.add('hidden');overlayEl.classList.remove('hidden');overlayEl.textContent=n>0?n:'開始！';if(n<=0)setTimeout(()=>overlayEl.classList.add('hidden'),500)});
 s.on('go',x=>{cfg=x.settings;waitPanel.classList.add('hidden');gamePanel.classList.remove('hidden');topBar.classList.remove('hidden');overlayEl.classList.add('hidden');startGame(x.gameSeed,x.gameId,x.started,x.gameEnds,false)});
 s.on('gameTime',ms=>{if(!gamePanel.classList.contains('hidden')||completed)timerEl.textContent=ms==null?'∞':fmt(ms)});
 s.on('ranking',rs=>{latestRanking=rs;if(completed)renderCompleted(false)});
