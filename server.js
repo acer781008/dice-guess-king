@@ -1,122 +1,67 @@
 const express=require('express');
 const http=require('http');
-const crypto=require('crypto');
 const {Server}=require('socket.io');
-const app=express(), server=http.createServer(app), io=new Server(server);
-app.use(express.json());
-const ADMIN_PASSWORD=process.env.ADMIN_PASSWORD||'1234';
-const adminTokens=new Set();
-app.post('/api/admin-login',(req,res)=>{
-  const pw=String(req.body?.password||'');
-  if(pw!==ADMIN_PASSWORD)return res.status(401).json({ok:false,msg:'密碼錯誤'});
-  const token=crypto.randomBytes(24).toString('hex');
-  adminTokens.add(token);
-  res.json({ok:true,token});
-});
-app.use(express.static('public'));
-io.use((socket,next)=>{
-  const token=String(socket.handshake.auth?.adminToken||'');
-  socket.data.isAdmin=adminTokens.has(token);
-  next();
-});
+const path=require('path');
+const app=express(); const server=http.createServer(app);
+const io=new Server(server,{pingTimeout:20000,pingInterval:25000,transports:['websocket','polling']});
+app.use(express.json()); app.use(express.static(path.join(__dirname,'public')));
 
+const ADMIN_PASSWORD=process.env.ADMIN_PASSWORD || '1234';
 const rooms=new Map();
-const code=()=>String(Math.floor(100000+Math.random()*900000));
-function onlineCount(r){return [...r.players.values()].filter(p=>p.online).length}
-function clean(r){return {code:r.code,settings:r.settings,state:r.state,online:onlineCount(r),players:[...r.players.values()].map(p=>({name:p.name,score:p.score||0,time:p.time??null,done:!!p.done,online:!!p.online})),countdownEnds:r.countdownEnds||null,started:r.started||null,gameEnds:r.gameEnds||null,gameId:r.gameId||null}}
-function rank(r){return [...r.players.values()].sort((a,b)=>(b.score||0)-(a.score||0)||((a.time??1e12)-(b.time??1e12))).map((p,i)=>({name:p.name,score:p.score||0,time:p.time??null,done:!!p.done,rank:i+1}))}
-function emit(r){io.to(r.code).emit('room',clean(r));io.to(r.code).emit('ranking',rank(r));}
-function clearTimers(r){if(r.timer)clearTimeout(r.timer);if(r.countdownTimer)clearInterval(r.countdownTimer);if(r.gameTicker)clearInterval(r.gameTicker);if(r.scheduleTimer)clearTimeout(r.scheduleTimer);r.timer=r.countdownTimer=r.gameTicker=r.scheduleTimer=null}
-function clearPlayTimers(r){if(r.timer)clearTimeout(r.timer);if(r.countdownTimer)clearInterval(r.countdownTimer);if(r.gameTicker)clearInterval(r.gameTicker);r.timer=r.countdownTimer=r.gameTicker=null}
-function finish(r,reason){if(!r||r.state==='finished')return;r.state='finished';clearTimers(r);emit(r);io.to(r.code).emit('finished',{reason,ranking:rank(r)});}
-function gameMs(settings){if(String(settings.gameMinutes)==='unlimited')return null;const n=Number(settings.gameMinutes);return Number.isFinite(n)&&n>0?n*60000:3*60000}
-function beginCountdown(r){
-  if(!r||r.state!=='waiting')return;
-  if(r.scheduleTimer){clearTimeout(r.scheduleTimer);r.scheduleTimer=null}
-  clearPlayTimers(r);
-  r.state='countdown';
-  for(const p of r.players.values()){p.score=0;p.time=null;p.done=false}
-  const seconds=Math.max(1,Number(r.settings.startCountdown)||5);
-  r.countdownEnds=Date.now()+seconds*1000;
-  emit(r);
-  const tick=()=>{
-    const left=Math.max(0,Math.ceil((r.countdownEnds-Date.now())/1000));
-    io.to(r.code).emit('countdownTick',left);
-    if(left<=0){
-      clearInterval(r.countdownTimer);r.countdownTimer=null;
-      r.state='playing';r.started=Date.now();r.gameId=`${r.code}-${r.started}`;r.gameSeed=Math.floor(Math.random()*0x7fffffff);
-      const ms=gameMs(r.settings);
-      r.gameEnds=ms? r.started+ms : null;
-      emit(r);
-      io.to(r.code).emit('go',{settings:r.settings,gameSeed:r.gameSeed,gameEnds:r.gameEnds,started:r.started,gameId:r.gameId});
-      if(ms){
-        const gameTick=()=>{const remain=Math.max(0,r.gameEnds-Date.now());io.to(r.code).emit('gameTime',remain)};
-        gameTick();r.gameTicker=setInterval(gameTick,1000);r.timer=setTimeout(()=>finish(r,'時間到'),ms);
-      }else{
-        io.to(r.code).emit('gameTime',null);
-      }
-    }
-  };
-  tick();r.countdownTimer=setInterval(tick,250);
+const modes=['sum','multiply','memory','size','parity','multiple'];
+const now=()=>Date.now();
+function roomCode(){let c; do{c=String(Math.floor(100000+Math.random()*900000));}while(rooms.has(c)); return c;}
+function defaults(code){return {code,createdAt:now(),settings:{title:'數字大亂鬥',note:'',scheduledAt:'',boardSize:6,mode:'mixed',roundMode:'auto',roundSeconds:45,totalRounds:10,startCountdown:5,gameMinutes:10,finishType:'rounds',finishValue:10,teamMode:false,teamAssign:'auto',playerLimit:10,streak:true,allowJoinDuringGame:true},state:{phase:'waiting',round:0,currentMode:'sum',roundEndsAt:null,gameEndsAt:null,startedAt:null},players:{},scores:{},history:[],teams:{red:0,blue:0}}}
+function publicRoom(r){return {code:r.code,settings:r.settings,state:r.state,scores:r.scores,history:r.history,teams:r.teams,playersList:Object.values(r.scores).map(x=>({playerId:x.playerId,name:x.name,team:x.team,online:x.online}))};}
+function persistLeaderboard(r){
+  r.history = Object.values(r.scores).sort((a,b)=>b.score-a.score||a.joinedAt-b.joinedAt).map((x,i)=>({...x,rank:i+1}));
 }
-function scheduleIfNeeded(r){
-  if(r.scheduleTimer){clearTimeout(r.scheduleTimer);r.scheduleTimer=null}
-  if(r.state!=='waiting')return;
-  const use=!!r.settings.useScheduledStart;
-  const at=Number(r.settings.scheduledAt)||0;
-  if(!use||!at)return;
-  const wait=at-Date.now();
-  if(wait<=0){beginCountdown(r);return}
-  r.scheduleTimer=setTimeout(()=>{if((Number(r.settings.scheduledAt)||0)>Date.now())scheduleIfNeeded(r);else beginCountdown(r)},Math.min(wait,2147483647));
+function chooseMode(r){ if(r.settings.mode!=='mixed') return r.settings.mode; return modes[Math.floor(Math.random()*modes.length)]; }
+function startRound(r){
+  r.state.round += 1; r.state.currentMode=chooseMode(r); r.state.phase='playing';
+  r.state.roundEndsAt = r.settings.roundMode==='auto' ? now()+Number(r.settings.roundSeconds||45)*1000 : null;
+  io.to(r.code).emit('round:start',{state:r.state,settings:r.settings});
+  if(r.settings.roundMode==='auto') setTimeout(()=>{ const rr=rooms.get(r.code); if(!rr||rr.state.phase!=='playing')return; if(rr.state.round!==r.state.round)return; endOrNext(rr); }, Number(r.settings.roundSeconds||45)*1000+100);
 }
+function finishGame(r){r.state.phase='finished';r.state.roundEndsAt=null;persistLeaderboard(r);io.to(r.code).emit('game:finished',publicRoom(r));}
+function endOrNext(r){
+  const maxRounds=Number(r.settings.totalRounds||10);
+  if(r.settings.finishType==='rounds' && r.state.round>=maxRounds) return finishGame(r);
+  if(r.state.gameEndsAt && now()>=r.state.gameEndsAt) return finishGame(r);
+  startRound(r);
+}
+setInterval(()=>{ for(const r of rooms.values()){ if(r.state.phase==='playing'&&r.state.gameEndsAt&&now()>=r.state.gameEndsAt) finishGame(r); }},1000);
 
-io.on('connection',s=>{
-  s.on('createRoom',(settings,cb)=>{
-    if(!s.data.isAdmin)return cb?.({ok:false,msg:'主控驗證失敗，請重新登入'});
-    let c;do c=code();while(rooms.has(c));
-    let r={code:c,settings,state:'waiting',players:new Map(),timer:null,countdownTimer:null,gameTicker:null,scheduleTimer:null,countdownEnds:null,started:null,gameEnds:null,gameId:null,gameSeed:null};
-    rooms.set(c,r);s.join(c);s.data.admin=c;scheduleIfNeeded(r);emit(r);cb?.({ok:true,code:c});
+app.post('/api/admin/login',(req,res)=>res.json({ok:String(req.body.password||'')===ADMIN_PASSWORD}));
+app.post('/api/rooms',(req,res)=>{if(String(req.body.password||'')!==ADMIN_PASSWORD)return res.status(401).json({ok:false}); const code=roomCode(); const r=defaults(code); rooms.set(code,r); res.json({ok:true,room:publicRoom(r)});});
+app.get('/api/rooms/:code',(req,res)=>{const r=rooms.get(req.params.code); if(!r)return res.status(404).json({ok:false}); res.json({ok:true,room:publicRoom(r)});});
+app.put('/api/rooms/:code',(req,res)=>{if(String(req.body.password||'')!==ADMIN_PASSWORD)return res.status(401).json({ok:false}); const r=rooms.get(req.params.code); if(!r)return res.status(404).json({ok:false}); r.settings={...r.settings,...req.body.settings,title:'數字大亂鬥'}; io.to(r.code).emit('room:update',publicRoom(r)); res.json({ok:true,room:publicRoom(r)});});
+app.delete('/api/rooms/:code',(req,res)=>{if(String(req.body.password||'')!==ADMIN_PASSWORD)return res.status(401).json({ok:false}); const r=rooms.get(req.params.code); if(!r)return res.status(404).json({ok:false}); rooms.delete(req.params.code); io.to(req.params.code).emit('room:deleted'); res.json({ok:true});});
+
+io.on('connection',socket=>{
+  socket.on('room:join',({code,name,playerId,team})=>{
+    const r=rooms.get(String(code||'')); if(!r)return socket.emit('join:error','找不到房間');
+    if(r.state.phase==='playing'&&!r.settings.allowJoinDuringGame)return socket.emit('join:error','遊戲進行中，暫停加入');
+    if(r.settings.teamMode&&r.settings.teamAssign==='self'&&!r.scores[playerId]){const limit=Math.max(2,Number(r.settings.playerLimit||10)), cap=Math.floor(limit/2);const vals=Object.values(r.scores);if(vals.length>=limit)return socket.emit('join:error','房間人數已滿');if(team==='red'&&vals.filter(x=>x.team==='red').length>=cap)return socket.emit('join:error','🔴 紅隊已滿，請選藍隊');if(team==='blue'&&vals.filter(x=>x.team==='blue').length>=cap)return socket.emit('join:error','🔵 藍隊已滿，請選紅隊');}
+    const id=playerId||('p_'+Math.random().toString(36).slice(2,10)); const clean=(name||'玩家').trim().slice(0,10)||'玩家';
+    socket.join(r.code); socket.data={code:r.code,playerId:id};
+    if(!r.scores[id]){let assigned='red';if(r.settings.teamMode&&r.settings.teamAssign==='self'&&(team==='red'||team==='blue'))assigned=team;else{const vals=Object.values(r.scores),rc=vals.filter(x=>x.team==='red').length,bc=vals.filter(x=>x.team==='blue').length;assigned=rc<=bc?'red':'blue'}r.scores[id]={playerId:id,name:clean,score:0,streak:0,bestStreak:0,team:assigned,joinedAt:now(),online:true};}
+    else {r.scores[id].name=clean;r.scores[id].online=true;}
+    r.players[id]=socket.id; persistLeaderboard(r);
+    socket.emit('join:ok',{playerId:id,room:publicRoom(r)}); io.to(r.code).emit('leaderboard',r.history);io.to(r.code).emit('room:update',publicRoom(r));
   });
-  s.on('saveSettings',({code,settings})=>{
-    let r=rooms.get(code);
-    if(r&&s.data.admin===code&&r.state==='waiting'){r.settings=settings;scheduleIfNeeded(r);emit(r)}
+  socket.on('score:add',({points=10,success=true})=>{
+    const {code,playerId} = socket.data||{}; const r=rooms.get(code); if(!r||!r.scores[playerId]||r.state.phase!=='playing')return;
+    const p=r.scores[playerId];
+    if(success){p.streak=(p.streak||0)+1;p.bestStreak=Math.max(p.bestStreak||0,p.streak); const bonus=r.settings.streak?Math.min(20,(p.streak-1)*2):0; p.score += Math.max(0,Number(points)||0)+bonus;}
+    else p.streak=0;
+    if(r.settings.teamMode){r.teams.red=0;r.teams.blue=0;for(const s of Object.values(r.scores))r.teams[s.team]=(r.teams[s.team]||0)+s.score;}
+    persistLeaderboard(r); io.to(r.code).emit('leaderboard',r.history); io.to(r.code).emit('teams',r.teams); if(r.settings.finishType==='score'&&p.score>=Number(r.settings.finishValue||100))finishGame(r);
   });
-  s.on('peekRoom',({code},cb)=>{
-    const r=rooms.get(String(code||''));
-    if(!r)return cb?.({ok:false,msg:'找不到房間'});
-    cb?.({ok:true,state:r.state,settings:r.settings,countdownEnds:r.countdownEnds||null,started:r.started||null,gameEnds:r.gameEnds||null,gameId:r.gameId||null});
-  });
-  s.on('join',({code,name},cb)=>{
-    let r=rooms.get(String(code||''));
-    if(!r)return cb?.({ok:false,msg:'找不到房間'});
-    name=String(name||'').trim().slice(0,20);
-    if(!name)return cb?.({ok:false,msg:'請輸入玩家名稱'});
-    let key=name.toLowerCase();let p=r.players.get(key);const returning=!!p;
-    if(!p){
-      if(r.state!=='waiting')return cb?.({ok:false,msg:'比賽已開始，無法加入新玩家'});
-      p={name,score:0,time:null,done:false,online:true};r.players.set(key,p);
-    }else p.online=true;
-    s.join(r.code);s.data.room=r.code;s.data.key=key;emit(r);
-    cb?.({ok:true,returning,room:clean(r),resume:r.state==='playing'?{settings:r.settings,gameSeed:r.gameSeed,gameEnds:r.gameEnds,started:r.started,gameId:r.gameId}:null});
-  });
-  s.on('start',({code})=>{let r=rooms.get(code);if(!r||s.data.admin!==code||r.state!=='waiting')return;beginCountdown(r)});
-  s.on('progress',({score,time,done},cb)=>{
-    let r=rooms.get(s.data.room),p=r?.players.get(s.data.key);if(!r||!p||r.state!=='playing')return cb?.({ok:false});
-    p.score=Math.max(0,Number(score)||0);
-    const newlyDone=!!done&&!p.done;
-    if(newlyDone){p.time=Math.max(0,Number(time)||0);p.done=true}
-    emit(r);
-    const rs=rank(r);const mine=rs.find(x=>x.name.toLowerCase()===p.name.toLowerCase());
-    if(newlyDone){s.emit('completed',{ranking:rs,mine});}
-    cb?.({ok:true,ranking:rs,mine});
-    if(newlyDone){
-      let n=[...r.players.values()].filter(x=>x.done).length,goal=r.settings.finishGoal;
-      if(goal!=='all'){
-        let g=Number(goal);if(g&&n>=g)finish(r,g===1?'第一位完成':`前 ${g} 位完成`)
-      }else if(r.players.size&&n===r.players.size)finish(r,'全部玩家完成');
-    }
-  });
-  s.on('deleteRoom',({code})=>{let r=rooms.get(code);if(r&&s.data.admin===code){clearTimers(r);io.to(code).emit('deleted');rooms.delete(code)}});
-  s.on('disconnect',()=>{let r=rooms.get(s.data.room),p=r?.players.get(s.data.key);if(p){p.online=false;emit(r)}});
+  socket.on('admin:start',({code,password})=>{const r=rooms.get(code);if(!r||String(password)!==ADMIN_PASSWORD)return; r.state.phase='countdown';r.state.round=0;r.state.startedAt=now();r.state.gameEndsAt=r.settings.finishType==='time'?now()+Math.max(1,Number(r.settings.gameMinutes||10))*60000:null; io.to(code).emit('game:countdown',{seconds:Number(r.settings.startCountdown||5)}); setTimeout(()=>{const rr=rooms.get(code);if(rr&&rr.state.phase==='countdown')startRound(rr);},Number(r.settings.startCountdown||5)*1000);});
+  socket.on('admin:next',({code,password})=>{const r=rooms.get(code);if(r&&String(password)===ADMIN_PASSWORD)endOrNext(r);});
+  socket.on('admin:end',({code,password})=>{const r=rooms.get(code);if(r&&String(password)===ADMIN_PASSWORD)finishGame(r);});
+  socket.on('admin:setTeam',({code,password,playerId,team})=>{const r=rooms.get(code);if(!r||String(password)!==ADMIN_PASSWORD||!r.scores[playerId]||!['red','blue'].includes(team))return;r.scores[playerId].team=team;if(r.settings.teamMode){r.teams.red=0;r.teams.blue=0;for(const s of Object.values(r.scores))r.teams[s.team]=(r.teams[s.team]||0)+s.score;}persistLeaderboard(r);io.to(code).emit('leaderboard',r.history);io.to(code).emit('teams',r.teams);io.to(code).emit('room:update',publicRoom(r));});
+  socket.on('disconnect',()=>{const {code,playerId}=socket.data||{};const r=rooms.get(code);if(r&&r.scores[playerId]){r.scores[playerId].online=false;delete r.players[playerId];persistLeaderboard(r);io.to(code).emit('leaderboard',r.history);io.to(code).emit('room:update',publicRoom(r));}});
 });
-server.listen(process.env.PORT||3000,()=>console.log('Memory King running on '+(process.env.PORT||3000)));
+server.listen(process.env.PORT||3000,()=>console.log('Number Battle V1.2.4 running on',process.env.PORT||3000));

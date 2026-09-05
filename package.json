@@ -1,6 +1,7 @@
 {
-  "name": "memory-king",
-  "version": "1.1.8",
+  "name": "number-battle-v1",
+  "version": "1.2.2",
+  "private": true,
   "scripts": {
     "start": "node server.js"
   },
